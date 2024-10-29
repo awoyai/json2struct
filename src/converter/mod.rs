@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
-use lazy_static::lazy_static;
 use serde_json::Value;
 mod j2go;
 mod j2rs;
@@ -18,6 +15,7 @@ pub enum StructType {
     NULL,
     STRING,
     VEC,
+    OBJECT,
 }
 
 impl DevLang {
@@ -31,8 +29,8 @@ impl DevLang {
 }
 
 pub trait Converter {
-    fn generate_struct(&self, val: serde_json::Value) -> Result<String>;
-    fn convert_struct_type(&self, struct_type: StructType) -> String;
+    fn generate_struct(&mut self, val: &Value) -> Result<String>;
+    fn convert_struct_type(&mut self, val: &Value) -> Result<String>;
 }
 
 pub fn new_converter(lang: DevLang) -> impl Converter {
@@ -60,29 +58,19 @@ pub fn underline_humb(s: &String) -> String {
     humb_char_vec.iter().collect::<String>()
 }
 
-fn get_struct_type(val: &Value, cst: fn(struct_type: StructType) -> String) -> String {
-    let mut struct_type = String::new();
+fn get_struct_type(val: &Value) -> StructType {
     if val.is_boolean() {
-        struct_type = cst(StructType::BOOL);
+        return StructType::BOOL;
     } else if val.is_f64() {
-        struct_type = cst(StructType::BOOL);
+        return StructType::FLOAT64;
     } else if val.is_i64() {
-        struct_type = cst(StructType::BOOL);
+        return StructType::INT64;
     } else if val.is_object() {
-        todo!()
+        return StructType::OBJECT;
     } else if val.is_array() {
-        struct_type = match val.as_array() {
-            Some(arr) => {
-                let mut str = cst(StructType::BOOL);
-                str.push_str(get_struct_type(&arr[0], cst).as_str());
-                str
-            }
-            None => String::from("[]any"),
-        };
-    } else if val.is_null() {
-        struct_type = String::from("any")
+        return StructType::VEC;
     } else if val.is_string() {
-        struct_type = String::from("string")
+        return StructType::STRING;
     }
-    struct_type
+    StructType::NULL
 }
